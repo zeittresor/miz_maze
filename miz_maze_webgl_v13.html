@@ -1,0 +1,2416 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Miz Maze - WebGL v13</title>
+<style>
+  :root {
+    --bg: #050814;
+    --panel: rgba(7, 12, 26, .82);
+    --panel2: rgba(10, 17, 35, .94);
+    --text: #edf6ff;
+    --muted: #a9bdd6;
+    --accent: #5eead4;
+    --warn: #facc15;
+    --ok: #86efac;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: #050814;
+    color: var(--text);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  #gl {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    outline: none;
+    cursor: default;
+    user-select: none;
+    touch-action: none;
+    background: radial-gradient(circle at 50% 15%, #17213e 0%, #050814 64%, #02040b 100%);
+  }
+
+  #topbar {
+    position: fixed;
+    left: 14px;
+    top: 14px;
+    z-index: 16;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px;
+    border-radius: 16px;
+    background: rgba(7, 12, 26, .58);
+    border: 1px solid rgba(148, 163, 184, .18);
+    box-shadow: 0 12px 36px rgba(0,0,0,.28);
+    backdrop-filter: blur(12px);
+    user-select: none;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    color: var(--text);
+    background: rgba(15, 23, 42, .76);
+    border: 1px solid rgba(148, 163, 184, .18);
+    font-size: 13px;
+    font-weight: 740;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pill span {
+    color: var(--muted);
+    font-weight: 680;
+  }
+
+  button, select, input {
+    appearance: none;
+    color: var(--text);
+    border: 1px solid rgba(148, 163, 184, .25);
+    background: rgba(15, 23, 42, .86);
+    border-radius: 12px;
+    padding: 9px 11px;
+    font-weight: 740;
+    cursor: pointer;
+    transition: transform .12s ease, background .12s ease, border-color .12s ease;
+  }
+
+  button:hover, select:hover {
+    transform: translateY(-1px);
+    background: rgba(30, 41, 59, .96);
+    border-color: rgba(94, 234, 212, .52);
+  }
+
+  button.primary {
+    background: linear-gradient(135deg, rgba(20, 184, 166, .38), rgba(37, 99, 235, .30));
+    border-color: rgba(94, 234, 212, .64);
+  }
+
+  button.warn { border-color: rgba(250, 204, 21, .45); }
+
+  input {
+    cursor: text;
+    min-width: 150px;
+    font-weight: 580;
+  }
+
+  input[type="range"] {
+    min-width: 160px;
+    cursor: pointer;
+    padding: 9px 0;
+    accent-color: var(--accent);
+  }
+
+  .sliderWrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 12px;
+    color: var(--muted);
+    background: rgba(15, 23, 42, .58);
+    border: 1px solid rgba(148, 163, 184, .16);
+    font-size: 13px;
+    font-weight: 720;
+  }
+
+  .sliderWrap b {
+    color: var(--text);
+    min-width: 36px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #optionsPanel {
+    position: fixed;
+    left: 14px;
+    top: 66px;
+    z-index: 15;
+    width: min(560px, calc(100vw - 28px));
+    padding: 16px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(7, 12, 26, .92), rgba(12, 21, 42, .78));
+    border: 1px solid rgba(148, 163, 184, .22);
+    box-shadow: 0 18px 55px rgba(0,0,0,.45);
+    backdrop-filter: blur(14px);
+    user-select: none;
+    display: none;
+  }
+
+  #optionsPanel.visible { display: block; }
+
+  #optionsPanel h1 {
+    margin: 0 0 7px;
+    font-size: 20px;
+    letter-spacing: .02em;
+  }
+
+  #optionsPanel .sub {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  #statsGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .stat {
+    min-width: 0;
+    border-radius: 12px;
+    padding: 8px;
+    background: rgba(15, 23, 42, .62);
+    border: 1px solid rgba(148, 163, 184, .16);
+  }
+
+  .stat b {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 820;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .stat span {
+    display: block;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  #minimap {
+    position: fixed;
+    right: 14px;
+    top: 14px;
+    z-index: 11;
+    width: 190px;
+    height: 190px;
+    border-radius: 18px;
+    background: rgba(2, 6, 23, .74);
+    border: 1px solid rgba(148, 163, 184, .22);
+    box-shadow: 0 18px 50px rgba(0,0,0,.38);
+    backdrop-filter: blur(14px);
+    transition: width .14s ease, height .14s ease, opacity .14s ease;
+  }
+
+  #minimap.hidden {
+    display: none;
+  }
+
+  #overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(circle at 50% 35%, rgba(30, 58, 138, .18), rgba(0,0,0,0) 42%),
+      linear-gradient(135deg, rgba(2, 6, 23, .82), rgba(9, 4, 26, .72) 48%, rgba(3, 7, 18, .86));
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .16s ease;
+  }
+
+  #overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .card {
+    position: relative;
+    z-index: 101;
+    width: min(660px, calc(100vw - 34px));
+    pointer-events: auto;
+    touch-action: manipulation;
+    padding: 26px;
+    border-radius: 24px;
+    text-align: center;
+    background: var(--panel2);
+    border: 1px solid rgba(148, 163, 184, .24);
+    box-shadow: 0 26px 80px rgba(0,0,0,.55);
+    backdrop-filter: blur(18px);
+  }
+
+  .card h2 {
+    margin: 0 0 10px;
+    font-size: 28px;
+  }
+
+  .card p {
+    margin: 0 auto 17px;
+    max-width: 570px;
+    color: var(--muted);
+    line-height: 1.48;
+  }
+
+  .keygrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 18px 0;
+    text-align: left;
+  }
+
+  .key {
+    padding: 10px 12px;
+    border-radius: 14px;
+    color: var(--muted);
+    font-size: 13px;
+    background: rgba(15, 23, 42, .66);
+  }
+
+  .key strong { color: var(--text); }
+
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 23px;
+    z-index: 50;
+    transform: translateX(-50%) translateY(18px);
+    opacity: 0;
+    pointer-events: none;
+    padding: 11px 15px;
+    border-radius: 14px;
+    color: var(--text);
+    background: rgba(15, 23, 42, .94);
+    border: 1px solid rgba(148, 163, 184, .24);
+    box-shadow: 0 16px 45px rgba(0,0,0,.36);
+    transition: opacity .16s ease, transform .16s ease;
+  }
+
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  #diag {
+    display: none;
+  }
+
+  .infoBox {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    color: var(--muted);
+    background: rgba(2, 6, 23, .46);
+    border: 1px solid rgba(148, 163, 184, .16);
+    font-size: 12px;
+    line-height: 1.42;
+  }
+
+  .infoBox strong { color: var(--ok); }
+
+  #highscorePanel {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 16px;
+    background: rgba(2, 6, 23, .46);
+    border: 1px solid rgba(148, 163, 184, .16);
+    display: none;
+  }
+
+  #highscorePanel.visible { display: block; }
+
+  #highscorePanel h2 {
+    margin: 0 0 8px;
+    font-size: 16px;
+  }
+
+  #highscoreList {
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .scoreRow {
+    display: grid;
+    grid-template-columns: 34px 1fr 86px 86px;
+    gap: 8px;
+    align-items: center;
+    padding: 7px 8px;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, .55);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .scoreRow b { color: var(--text); }
+
+  .initialSlots {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 18px 0 8px;
+  }
+
+  .initialSlot {
+    width: 62px;
+    height: 72px;
+    display: grid;
+    place-items: center;
+    border-radius: 16px;
+    background: rgba(15, 23, 42, .74);
+    border: 1px solid rgba(148, 163, 184, .24);
+    font-size: 34px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .initialSlot.active {
+    border-color: rgba(94, 234, 212, .82);
+    box-shadow: 0 0 0 3px rgba(94, 234, 212, .15);
+    color: var(--accent);
+  }
+
+  .smallNote {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.42;
+  }
+
+  /* mobile controls v13 */
+  #touchControls {
+    position: fixed;
+    inset: 0;
+    z-index: 14;
+    pointer-events: none;
+    display: none;
+  }
+
+  body.mobile-ui #touchControls,
+  body.force-mobile-ui #touchControls {
+    display: block;
+  }
+
+  .touchStick {
+    position: fixed;
+    bottom: 24px;
+    width: 138px;
+    height: 138px;
+    border-radius: 999px;
+    pointer-events: auto;
+    background: radial-gradient(circle at center, rgba(148, 163, 184, .16), rgba(15, 23, 42, .40));
+    border: 1px solid rgba(148, 163, 184, .24);
+    box-shadow: 0 12px 36px rgba(0,0,0,.36);
+    backdrop-filter: blur(10px);
+    touch-action: none;
+  }
+
+  #moveStick { left: 22px; }
+  #lookStick { right: 22px; }
+
+  .touchKnob {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 58px;
+    height: 58px;
+    margin-left: -29px;
+    margin-top: -29px;
+    border-radius: 999px;
+    background: rgba(94, 234, 212, .36);
+    border: 1px solid rgba(94, 234, 212, .58);
+    box-shadow: inset 0 0 20px rgba(255,255,255,.08);
+    transform: translate(0, 0);
+  }
+
+  .touchLabel {
+    position: absolute;
+    width: 100%;
+    top: -26px;
+    color: rgba(226, 232, 240, .78);
+    text-align: center;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+
+  #mobileButtons {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    z-index: 15;
+    transform: translateX(-50%);
+    display: none;
+    gap: 8px;
+    pointer-events: auto;
+  }
+
+  body.mobile-ui #mobileButtons,
+  body.force-mobile-ui #mobileButtons {
+    display: flex;
+  }
+
+  #mobileButtons button {
+    min-width: 54px;
+    min-height: 46px;
+    padding: 9px 10px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, .78);
+    backdrop-filter: blur(10px);
+  }
+
+  @media (max-width: 860px), (pointer: coarse) {
+    body { overscroll-behavior: none; }
+    #topbar {
+      left: 8px;
+      top: 8px;
+      padding: 6px;
+      gap: 6px;
+    }
+    .pill { min-height: 34px; padding: 7px 9px; }
+    #optionsPanel {
+      max-height: calc(100vh - 74px);
+      overflow: auto;
+    }
+  }
+
+
+  #err {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    display: none;
+    overflow: auto;
+    padding: 24px;
+    background: #0f172a;
+    color: #fecaca;
+    white-space: pre-wrap;
+    font: 14px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+
+  noscript {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: #111827;
+    color: #fecaca;
+    text-align: center;
+    font-size: 18px;
+  }
+
+  @media (max-width: 860px) {
+    #topbar { left: 10px; top: 10px; max-width: calc(100vw - 20px); }
+    #optionsPanel { left: 10px; top: 62px; padding: 12px; }
+    #optionsPanel h1 { font-size: 17px; }
+    #optionsPanel .sub { font-size: 12px; }
+    #statsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #minimap { width: 130px; height: 130px; right: 10px; top: auto; bottom: 10px; }
+    #diag { display: none; }
+    .keygrid { grid-template-columns: 1fr; }
+    .scoreRow { grid-template-columns: 30px 1fr 74px; }
+    .scoreRow span:nth-child(4) { display: none; }
+  }
+</style>
+</head>
+<body>
+<noscript>JavaScript ist deaktiviert. Dieses Spiel benötigt JavaScript, aber keinen Webserver und keine externen Dateien.</noscript>
+
+<canvas id="gl" tabindex="0"></canvas>
+
+<div id="topbar">
+  <button id="startBtn" class="primary" type="button">Start</button>
+  <button id="optionsBtn" type="button">Optionen</button>
+  <span class="pill"><span>Zeit</span><b id="timeCompact">00:00</b></span>
+</div>
+
+<div id="optionsPanel">
+  <h1>Miz Maze · Optionen</h1>
+  <div class="sub">
+    Echtes WebGL, keine CDN-Abhängigkeit. Lokal per <code>file://</code> und auf Webserver spielbar.
+  </div>
+
+  <div id="statsGrid">
+    <div class="stat"><b>Zeit</b><span id="timeStat">00:00</span></div>
+    <div class="stat"><b>Seed</b><span id="seedStat">-</span></div>
+    <div class="stat"><b>Maze</b><span id="sizeStat">-</span></div>
+    <div class="stat"><b>FPS</b><span id="fpsStat">-</span></div>
+    <div class="stat"><b>Kamera</b><span id="cameraModeStat">Orbit</span></div>
+  </div>
+
+  <div id="buttons">
+    <button id="newBtn" type="button">Neues Maze</button>
+    <button id="resetBtn" class="warn" type="button">Reset</button>
+    <button id="camResetBtn" type="button">Kamera Reset</button>
+    <button id="cameraToggleBtn" type="button">Kamera: Orbit</button>
+    <button id="copySeedBtn" type="button">Seed kopieren</button>
+    <button id="musicBtn" type="button">Musik: An</button>
+    <label class="sliderWrap" title="Musiklautstärke">
+      Musik
+      <input id="musicVolume" type="range" min="0" max="100" value="45">
+      <b id="musicVolumeLabel">45%</b>
+    </label>
+    <button id="minimapBtn" type="button">Minimap: An</button>
+    <label class="sliderWrap" title="Minimap-Größe">
+      Minimap
+      <input id="minimapSize" type="range" min="90" max="260" value="190">
+      <b id="minimapSizeLabel">190</b>
+    </label>
+    <button id="highscoreBtn" type="button">Highscores</button>
+    <button id="gamepadInfoBtn" type="button">Joystick: prüfen</button>
+    <select id="sizeSelect" title="Maze-Größe">
+      <option value="15">Klein 15×15</option>
+      <option value="21" selected>Mittel 21×21</option>
+      <option value="27">Groß 27×27</option>
+      <option value="33">Sehr groß 33×33</option>
+    </select>
+    <select id="controlSelect" title="Steuerungsmodus">
+      <option value="camera" selected>Kamera-relative Steuerung</option>
+      <option value="world">Welt-relative Steuerung</option>
+    </select>
+    <input id="seedInput" placeholder="Seed optional" title="Optionaler Seed">
+    <button id="seedBtn" type="button">Seed laden</button>
+  </div>
+
+  <div class="infoBox">
+    JS: <strong>aktiv</strong> · Renderer: <strong id="rendererStat">WebGL</strong> · Speicher: <strong>localStorage</strong> · lokal und Webserver-kompatibel
+  </div>
+
+  <div id="highscorePanel">
+    <h2>Highscores</h2>
+    <div id="highscoreList"></div>
+  </div>
+</div>
+
+<canvas id="minimap" width="220" height="220"></canvas>
+
+<div id="overlay" class="visible">
+  <div class="card">
+    <h2 id="overlayTitle">Miz Maze</h2>
+    <p id="overlayText">
+      <b>Miz Maze</b> nutzt echtes WebGL und läuft lokal sowie auf einem Webserver. Das Optionsfeld bleibt im Spiel ausgeblendet; über <b>Optionen</b> erreichst du Seed, Musik, Highscores und Steuerung.
+    </p>
+    <div class="keygrid">
+      <div class="key"><strong>W/A/S/D</strong> oder linker Stick: Kugel rollen</div>
+      <div class="key"><strong>rechter Stick</strong> oder rechte Maustaste: Kamera drehen</div>
+      <div class="key"><strong>C / Gamepad Y</strong> First Person / Orbit</div>
+      <div class="key"><strong>Mausrad / Trigger</strong> Zoom · <strong>R</strong> Reset · <strong>N</strong> neues Maze · <strong>O</strong> Optionen</div>
+    </div>
+    <button id="bigStartBtn" class="primary" type="button" onclick="window.mizMazeStartDirect && window.mizMazeStartDirect()">Spiel starten</button>
+  </div>
+</div>
+
+<div id="touchControls" aria-hidden="true">
+  <div id="moveStick" class="touchStick">
+    <div class="touchLabel">Move</div>
+    <div id="moveKnob" class="touchKnob"></div>
+  </div>
+  <div id="lookStick" class="touchStick">
+    <div class="touchLabel">Look</div>
+    <div id="lookKnob" class="touchKnob"></div>
+  </div>
+</div>
+
+<div id="mobileButtons" aria-hidden="true">
+  <button id="mobileCamBtn" type="button">Cam</button>
+  <button id="mobileResetBtn" type="button">Reset</button>
+  <button id="mobileOptBtn" type="button">Opt</button>
+</div>
+
+<div id="toast"></div>
+<div id="diag">diagnostics hidden</div>
+<div id="err"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+
+  const canvas = $('gl');
+  const miniCanvas = $('minimap');
+  const mini = miniCanvas.getContext('2d');
+
+  const ui = {
+    startBtn: $('startBtn'),
+    bigStartBtn: $('bigStartBtn'),
+    optionsBtn: $('optionsBtn'),
+    optionsPanel: $('optionsPanel'),
+    newBtn: $('newBtn'),
+    resetBtn: $('resetBtn'),
+    camResetBtn: $('camResetBtn'),
+    cameraToggleBtn: $('cameraToggleBtn'),
+    cameraModeStat: $('cameraModeStat'),
+    minimapBtn: $('minimapBtn'),
+    minimapSize: $('minimapSize'),
+    minimapSizeLabel: $('minimapSizeLabel'),
+    copySeedBtn: $('copySeedBtn'),
+    musicBtn: $('musicBtn'),
+    musicVolume: $('musicVolume'),
+    musicVolumeLabel: $('musicVolumeLabel'),
+    highscoreBtn: $('highscoreBtn'),
+    gamepadInfoBtn: $('gamepadInfoBtn'),
+    moveStick: $('moveStick'),
+    lookStick: $('lookStick'),
+    moveKnob: $('moveKnob'),
+    lookKnob: $('lookKnob'),
+    mobileCamBtn: $('mobileCamBtn'),
+    mobileResetBtn: $('mobileResetBtn'),
+    mobileOptBtn: $('mobileOptBtn'),
+    highscorePanel: $('highscorePanel'),
+    highscoreList: $('highscoreList'),
+    sizeSelect: $('sizeSelect'),
+    controlSelect: $('controlSelect'),
+    seedInput: $('seedInput'),
+    seedBtn: $('seedBtn'),
+    overlay: $('overlay'),
+    overlayTitle: $('overlayTitle'),
+    overlayText: $('overlayText'),
+    time: $('timeStat'),
+    timeCompact: $('timeCompact'),
+    seed: $('seedStat'),
+    size: $('sizeStat'),
+    fps: $('fpsStat'),
+    toast: $('toast'),
+    renderer: $('rendererStat'),
+    err: $('err')
+  };
+
+  function fail(message) {
+    ui.err.style.display = 'block';
+    ui.err.textContent = message;
+  }
+
+  function getGL() {
+    const opts = {
+      alpha: false,
+      antialias: true,
+      depth: true,
+      stencil: false,
+      premultipliedAlpha: false,
+      preserveDrawingBuffer: false,
+      powerPreference: 'high-performance'
+    };
+    return canvas.getContext('webgl2', opts) ||
+           canvas.getContext('webgl', opts) ||
+           canvas.getContext('experimental-webgl', opts);
+  }
+
+  const gl = getGL();
+  if (!gl) {
+    fail('WebGL konnte nicht initialisiert werden.\n\nFirefox prüfen:\n- about:support -> Grafik/WebGL\n- Hardwarebeschleunigung aktivieren\n- about:config: webgl.disabled sollte false sein\n- ggf. Treiber aktualisieren');
+    return;
+  }
+
+  const isWebGL2 = (typeof WebGL2RenderingContext !== 'undefined') && gl instanceof WebGL2RenderingContext;
+  ui.renderer.textContent = isWebGL2 ? 'WebGL2' : 'WebGL1';
+
+  const Mat4 = {
+    create() { return new Float32Array(16); },
+
+    multiply(out, a, b) {
+      // Column-major: out = a * b. Compatible with WebGL uniforms.
+      const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
+      const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
+      const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
+      const a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+
+      const b00 = b[0], b01 = b[1], b02 = b[2], b03 = b[3];
+      const b10 = b[4], b11 = b[5], b12 = b[6], b13 = b[7];
+      const b20 = b[8], b21 = b[9], b22 = b[10], b23 = b[11];
+      const b30 = b[12], b31 = b[13], b32 = b[14], b33 = b[15];
+
+      out[0] = b00 * a00 + b01 * a10 + b02 * a20 + b03 * a30;
+      out[1] = b00 * a01 + b01 * a11 + b02 * a21 + b03 * a31;
+      out[2] = b00 * a02 + b01 * a12 + b02 * a22 + b03 * a32;
+      out[3] = b00 * a03 + b01 * a13 + b02 * a23 + b03 * a33;
+      out[4] = b10 * a00 + b11 * a10 + b12 * a20 + b13 * a30;
+      out[5] = b10 * a01 + b11 * a11 + b12 * a21 + b13 * a31;
+      out[6] = b10 * a02 + b11 * a12 + b12 * a22 + b13 * a32;
+      out[7] = b10 * a03 + b11 * a13 + b12 * a23 + b13 * a33;
+      out[8] = b20 * a00 + b21 * a10 + b22 * a20 + b23 * a30;
+      out[9] = b20 * a01 + b21 * a11 + b22 * a21 + b23 * a31;
+      out[10] = b20 * a02 + b21 * a12 + b22 * a22 + b23 * a32;
+      out[11] = b20 * a03 + b21 * a13 + b22 * a23 + b23 * a33;
+      out[12] = b30 * a00 + b31 * a10 + b32 * a20 + b33 * a30;
+      out[13] = b30 * a01 + b31 * a11 + b32 * a21 + b33 * a31;
+      out[14] = b30 * a02 + b31 * a12 + b32 * a22 + b33 * a32;
+      out[15] = b30 * a03 + b31 * a13 + b32 * a23 + b33 * a33;
+      return out;
+    },
+
+    perspective(out, fovy, aspect, near, far) {
+      const f = 1.0 / Math.tan(fovy / 2);
+      const nf = 1 / (near - far);
+      out[0] = f / aspect; out[1] = 0; out[2] = 0; out[3] = 0;
+      out[4] = 0; out[5] = f; out[6] = 0; out[7] = 0;
+      out[8] = 0; out[9] = 0; out[10] = (far + near) * nf; out[11] = -1;
+      out[12] = 0; out[13] = 0; out[14] = (2 * far * near) * nf; out[15] = 0;
+      return out;
+    },
+
+    lookAt(out, eye, center, up) {
+      let x0, x1, x2, y0, y1, y2, z0, z1, z2, len;
+
+      z0 = eye[0] - center[0];
+      z1 = eye[1] - center[1];
+      z2 = eye[2] - center[2];
+      len = Math.hypot(z0, z1, z2);
+      if (len === 0) { z2 = 1; }
+      else { z0 /= len; z1 /= len; z2 /= len; }
+
+      x0 = up[1] * z2 - up[2] * z1;
+      x1 = up[2] * z0 - up[0] * z2;
+      x2 = up[0] * z1 - up[1] * z0;
+      len = Math.hypot(x0, x1, x2);
+      if (len === 0) { x0 = 1; x1 = 0; x2 = 0; }
+      else { x0 /= len; x1 /= len; x2 /= len; }
+
+      y0 = z1 * x2 - z2 * x1;
+      y1 = z2 * x0 - z0 * x2;
+      y2 = z0 * x1 - z1 * x0;
+
+      out[0] = x0; out[1] = y0; out[2] = z0; out[3] = 0;
+      out[4] = x1; out[5] = y1; out[6] = z1; out[7] = 0;
+      out[8] = x2; out[9] = y2; out[10] = z2; out[11] = 0;
+      out[12] = -(x0 * eye[0] + x1 * eye[1] + x2 * eye[2]);
+      out[13] = -(y0 * eye[0] + y1 * eye[1] + y2 * eye[2]);
+      out[14] = -(z0 * eye[0] + z1 * eye[1] + z2 * eye[2]);
+      out[15] = 1;
+      return out;
+    },
+
+    fromTRS(out, t, ry, s) {
+      const c = Math.cos(ry);
+      const sn = Math.sin(ry);
+      out[0] = c * s[0]; out[1] = 0; out[2] = -sn * s[0]; out[3] = 0;
+      out[4] = 0; out[5] = s[1]; out[6] = 0; out[7] = 0;
+      out[8] = sn * s[2]; out[9] = 0; out[10] = c * s[2]; out[11] = 0;
+      out[12] = t[0]; out[13] = t[1]; out[14] = t[2]; out[15] = 1;
+      return out;
+    }
+  };
+
+  function compile(type, src) {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src);
+    gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+      const msg = gl.getShaderInfoLog(sh);
+      gl.deleteShader(sh);
+      throw new Error('Shader compile failed:\n' + msg);
+    }
+    return sh;
+  }
+
+  function createProgram(vsSrc, fsSrc) {
+    const vs = compile(gl.VERTEX_SHADER, vsSrc);
+    const fs = compile(gl.FRAGMENT_SHADER, fsSrc);
+    const p = gl.createProgram();
+    gl.attachShader(p, vs);
+    gl.attachShader(p, fs);
+    gl.linkProgram(p);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+      const msg = gl.getProgramInfoLog(p);
+      gl.deleteProgram(p);
+      throw new Error('Program link failed:\n' + msg);
+    }
+    return p;
+  }
+
+  const vsSrc = `
+    attribute vec3 aPos;
+    attribute vec3 aNormal;
+
+    uniform mat4 uModel;
+    uniform mat4 uViewProj;
+
+    varying vec3 vNormal;
+    varying vec3 vWorld;
+    varying float vDepth;
+
+    void main() {
+      vec4 world = uModel * vec4(aPos, 1.0);
+      gl_Position = uViewProj * world;
+      vWorld = world.xyz;
+      vNormal = normalize(mat3(uModel) * aNormal);
+      vDepth = gl_Position.z / gl_Position.w;
+    }
+  `;
+
+  const fsSrc = `
+    precision mediump float;
+
+    uniform vec3 uColor;
+    uniform vec3 uLightDir;
+    uniform vec3 uCamera;
+    uniform float uMetal;
+    uniform float uGlow;
+
+    varying vec3 vNormal;
+    varying vec3 vWorld;
+    varying float vDepth;
+
+    void main() {
+      vec3 n = normalize(vNormal);
+      vec3 l = normalize(uLightDir);
+      float diff = max(dot(n, l), 0.0);
+
+      vec3 viewDir = normalize(uCamera - vWorld);
+      vec3 halfDir = normalize(l + viewDir);
+      float spec = pow(max(dot(n, halfDir), 0.0), mix(20.0, 76.0, uMetal)) * mix(0.22, 1.1, uMetal);
+      float rim = pow(1.0 - max(dot(n, viewDir), 0.0), 2.15) * 0.18;
+
+      vec3 color = uColor * (0.30 + diff * 0.72) + vec3(spec) + uColor * rim + uColor * uGlow;
+      vec3 fogColor = vec3(0.020, 0.032, 0.075);
+      float fog = clamp((vDepth - 0.25) * 0.70, 0.0, 0.62);
+      color = mix(color, fogColor, fog);
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `;
+
+  const program = createProgram(vsSrc, fsSrc);
+  const loc = {
+    aPos: gl.getAttribLocation(program, 'aPos'),
+    aNormal: gl.getAttribLocation(program, 'aNormal'),
+    uModel: gl.getUniformLocation(program, 'uModel'),
+    uViewProj: gl.getUniformLocation(program, 'uViewProj'),
+    uColor: gl.getUniformLocation(program, 'uColor'),
+    uLightDir: gl.getUniformLocation(program, 'uLightDir'),
+    uCamera: gl.getUniformLocation(program, 'uCamera'),
+    uMetal: gl.getUniformLocation(program, 'uMetal'),
+    uGlow: gl.getUniformLocation(program, 'uGlow')
+  };
+
+  function createMesh(data) {
+    const vao = isWebGL2 ? gl.createVertexArray() : null;
+    if (vao) gl.bindVertexArray(vao);
+
+    const vbo = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertices), gl.STATIC_DRAW);
+
+    const stride = 6 * 4;
+    gl.enableVertexAttribArray(loc.aPos);
+    gl.vertexAttribPointer(loc.aPos, 3, gl.FLOAT, false, stride, 0);
+    gl.enableVertexAttribArray(loc.aNormal);
+    gl.vertexAttribPointer(loc.aNormal, 3, gl.FLOAT, false, stride, 3 * 4);
+
+    const ibo = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data.indices), gl.STATIC_DRAW);
+
+    if (vao) gl.bindVertexArray(null);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+    return { vao, vbo, ibo, count: data.indices.length };
+  }
+
+  function bindMesh(mesh) {
+    if (mesh.vao) {
+      gl.bindVertexArray(mesh.vao);
+    } else {
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vbo);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.ibo);
+      const stride = 6 * 4;
+      gl.enableVertexAttribArray(loc.aPos);
+      gl.vertexAttribPointer(loc.aPos, 3, gl.FLOAT, false, stride, 0);
+      gl.enableVertexAttribArray(loc.aNormal);
+      gl.vertexAttribPointer(loc.aNormal, 3, gl.FLOAT, false, stride, 3 * 4);
+    }
+  }
+
+  function drawMesh(mesh, model, color, metal, glow) {
+    bindMesh(mesh);
+    gl.uniformMatrix4fv(loc.uModel, false, model);
+    gl.uniform3fv(loc.uColor, color);
+    gl.uniform1f(loc.uMetal, metal || 0);
+    gl.uniform1f(loc.uGlow, glow || 0);
+    gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+  }
+
+  function cubeData() {
+    const v = [], i = [];
+    function face(corners, normal) {
+      const start = v.length / 6;
+      for (const c of corners) v.push(c[0], c[1], c[2], normal[0], normal[1], normal[2]);
+      i.push(start, start + 1, start + 2, start, start + 2, start + 3);
+    }
+    const x0 = -0.5, x1 = 0.5, y0 = -0.5, y1 = 0.5, z0 = -0.5, z1 = 0.5;
+    face([[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]], [0,0,1]);
+    face([[x1,y0,z0],[x0,y0,z0],[x0,y1,z0],[x1,y1,z0]], [0,0,-1]);
+    face([[x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0]], [0,1,0]);
+    face([[x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]], [0,-1,0]);
+    face([[x1,y0,z1],[x1,y0,z0],[x1,y1,z0],[x1,y1,z1]], [1,0,0]);
+    face([[x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0]], [-1,0,0]);
+    return { vertices: v, indices: i };
+  }
+
+  function sphereData(lat, lon) {
+    const v = [], i = [];
+    for (let y = 0; y <= lat; y++) {
+      const theta = y * Math.PI / lat;
+      const st = Math.sin(theta), ct = Math.cos(theta);
+      for (let x = 0; x <= lon; x++) {
+        const phi = x * Math.PI * 2 / lon;
+        const sp = Math.sin(phi), cp = Math.cos(phi);
+        const px = cp * st, py = ct, pz = sp * st;
+        v.push(px, py, pz, px, py, pz);
+      }
+    }
+    for (let y = 0; y < lat; y++) {
+      for (let x = 0; x < lon; x++) {
+        const a = y * (lon + 1) + x;
+        const b = a + lon + 1;
+        i.push(a, b, a + 1, b, b + 1, a + 1);
+      }
+    }
+    return { vertices: v, indices: i };
+  }
+
+  function planeData() {
+    const s = 0.5;
+    return {
+      vertices: [
+        -s,0,-s, 0,1,0,
+         s,0,-s, 0,1,0,
+         s,0, s, 0,1,0,
+        -s,0, s, 0,1,0
+      ],
+      indices: [0,1,2, 0,2,3]
+    };
+  }
+
+  const cubeMesh = createMesh(cubeData());
+  const sphereMesh = createMesh(sphereData(24, 32));
+  const planeMesh = createMesh(planeData());
+
+  const colors = {
+    wall: new Float32Array([0.25, 0.62, 0.88]),
+    wallAlt: new Float32Array([0.18, 0.46, 0.78]),
+    floor: new Float32Array([0.055, 0.095, 0.18]),
+    ball: new Float32Array([1.0, 0.38, 0.08]),
+    goal: new Float32Array([0.34, 1.0, 0.48])
+  };
+
+  const tmpModel = Mat4.create();
+  const view = Mat4.create();
+  const proj = Mat4.create();
+  const viewProj = Mat4.create();
+
+  const MINIMAP_ENABLED_KEY = 'mizMazeMinimapEnabled.v1';
+  const MINIMAP_SIZE_KEY = 'mizMazeMinimapSize.v1';
+
+  const state = {
+    running: false,
+    paused: false,
+    won: false,
+    mazeSize: 21,
+    seed: 0,
+    grid: [],
+    walls: [],
+    player: { x: 1.5, z: 1.5, y: 0.32, radius: 0.32, spin: 0, rollYaw: 0 },
+    goal: { x: 19.5, z: 19.5 },
+    camera: { mode: 'orbit', yaw: -Math.PI / 4, pitch: 0.82, fpPitch: -0.08, dist: 18 },
+    target: { x: 1.5, z: 1.5 },
+    keys: Object.create(null),
+    stickMoveX: 0,
+    stickMoveZ: 0,
+    stickLookX: 0,
+    stickLookY: 0,
+    gamepadName: '',
+    gamepadButtons: Object.create(null),
+    rightDrag: false,
+    lastMouseX: 0,
+    lastMouseY: 0,
+    elapsedBeforePause: 0,
+    startMs: 0,
+    lastFrame: performance.now(),
+    fpsAccum: 0,
+    fpsFrames: 0,
+    fpsLast: performance.now(),
+    dpr: 1,
+    minimapEnabled: localStorage.getItem(MINIMAP_ENABLED_KEY) !== '0',
+    minimapSize: Math.max(90, Math.min(260, parseInt(localStorage.getItem(MINIMAP_SIZE_KEY) || '190', 10))),
+    toastTimer: 0
+  };
+
+  const SCORE_KEY = 'mizMazeHighscores.v1';
+  const MUSIC_KEY = 'mizMazeMusicEnabled.v2';
+  const MUSIC_VOLUME_KEY = 'mizMazeMusicVolume.v2';
+  const INITIAL_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.split('');
+
+  const scoreEntry = {
+    active: false,
+    slots: [0, 0, 0],
+    selected: 0,
+    pendingTimeMs: 0,
+    pendingSeed: 0,
+    pendingSize: 0
+  };
+
+  const music = {
+    ctx: null,
+    master: null,
+    timer: 0,
+    enabled: localStorage.getItem(MUSIC_KEY) !== '0',
+    volume: Math.max(0, Math.min(1, parseFloat(localStorage.getItem(MUSIC_VOLUME_KEY) || '0.45'))),
+    playing: false,
+    step: 0,
+    nextTime: 0,
+    tempo: 104,
+
+    // Sauber gestimmte Dur-/Moll-Akkorde in A-Moll/C-Dur-Umfeld.
+    // Alle Werte sind Halbtonschritte relativ zu A3=220Hz.
+    progression: [
+      [-12, -8, -5, 0],   // A minor
+      [-7, -3, 0, 5],     // D minor / suspended feel
+      [-5, -1, 2, 7],     // E minor-ish
+      [-10, -7, -3, 2],   // G major
+      [-12, -8, -5, 0],
+      [-3, 0, 4, 9],      // C major
+      [-7, -3, 0, 5],
+      [-5, -1, 2, 7]
+    ],
+
+    // Pentatonisch angelehnte Melodie: weniger Reibung, harmonischer als v5.
+    melody: [0, 3, 5, 7, 10, 12, 10, 7, 5, 7, 10, 12, 15, 12, 10, 7, 3, 5, 7, 10, 12, 15, 17, 15, 12, 10, 7, 5, 3, 5, 7, 10]
+  };
+
+
+  function hashSeed(text) {
+    const s = String(text || '');
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function mulberry32(a) {
+    return function () {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function randomSeed() {
+    return (Date.now() ^ ((Math.random() * 0xffffffff) >>> 0)) >>> 0;
+  }
+
+  function ensureOdd(n) {
+    n = Math.max(9, Math.min(51, n | 0));
+    return n % 2 ? n : n + 1;
+  }
+
+  function createMaze(size, seed) {
+    const rng = mulberry32(seed);
+    const grid = Array.from({ length: size }, () => Array(size).fill(1));
+
+    function carve(x, z) {
+      grid[z][x] = 0;
+      const dirs = [[2,0],[-2,0],[0,2],[0,-2]];
+      for (let i = dirs.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        const t = dirs[i]; dirs[i] = dirs[j]; dirs[j] = t;
+      }
+      for (const [dx, dz] of dirs) {
+        const nx = x + dx, nz = z + dz;
+        if (nx > 0 && nx < size - 1 && nz > 0 && nz < size - 1 && grid[nz][nx] === 1) {
+          grid[z + dz / 2][x + dx / 2] = 0;
+          carve(nx, nz);
+        }
+      }
+    }
+
+    carve(1, 1);
+    grid[1][1] = 0; grid[1][2] = 0; grid[2][1] = 0;
+    grid[size - 2][size - 2] = 0; grid[size - 3][size - 2] = 0; grid[size - 2][size - 3] = 0;
+
+    const openings = Math.floor(size * size * 0.028);
+    for (let i = 0; i < openings; i++) {
+      const x = 1 + Math.floor(rng() * (size - 2));
+      const z = 1 + Math.floor(rng() * (size - 2));
+      if ((x > 2 || z > 2) && (x < size - 3 || z < size - 3)) grid[z][x] = 0;
+    }
+    return grid;
+  }
+
+  function buildWalls() {
+    state.walls.length = 0;
+    for (let z = 0; z < state.mazeSize; z++) {
+      for (let x = 0; x < state.mazeSize; x++) {
+        if (state.grid[z][x] === 1) state.walls.push({ x, z });
+      }
+    }
+  }
+
+  function showToast(text) {
+    ui.toast.textContent = text;
+    ui.toast.classList.add('show');
+    clearTimeout(state.toastTimer);
+    state.toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 1500);
+  }
+
+  function fmtTime(ms) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
+  }
+
+
+
+  function loadScores() {
+    try {
+      const data = JSON.parse(localStorage.getItem(SCORE_KEY) || '[]');
+      return Array.isArray(data) ? data.filter(s => s && typeof s.timeMs === 'number').slice(0, 20) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function saveScores(scores) {
+    localStorage.setItem(SCORE_KEY, JSON.stringify(scores.slice(0, 10)));
+  }
+
+  function rankForTime(timeMs) {
+    const scores = loadScores();
+    const rank = scores.findIndex(s => timeMs < s.timeMs);
+    if (rank >= 0) return rank;
+    return scores.length < 10 ? scores.length : -1;
+  }
+
+  function renderHighscores() {
+    const scores = loadScores();
+    if (!scores.length) {
+      ui.highscoreList.innerHTML = '<div class="smallNote">Noch keine Einträge. Erreiche das Ziel, um dich einzutragen.</div>';
+      return;
+    }
+
+    ui.highscoreList.innerHTML = scores.map((s, idx) => {
+      const name = String(s.name || 'AAA').slice(0, 3).replace(/[<>&]/g, '');
+      const maze = String(s.size || '?') + '×' + String(s.size || '?');
+      const seed = String(s.seed || '-');
+      return '<div class="scoreRow">' +
+        '<span>#' + String(idx + 1) + '</span>' +
+        '<b>' + name + '</b>' +
+        '<span>' + fmtTime(s.timeMs) + '</span>' +
+        '<span title="Seed ' + seed + '">' + maze + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  function submitHighscore() {
+    if (!scoreEntry.active) return;
+
+    const name = scoreEntry.slots.map(i => INITIAL_CHARS[i]).join('');
+    const scores = loadScores();
+    scores.push({
+      name,
+      timeMs: scoreEntry.pendingTimeMs,
+      seed: scoreEntry.pendingSeed,
+      size: scoreEntry.pendingSize,
+      date: new Date().toISOString()
+    });
+    scores.sort((a, b) => a.timeMs - b.timeMs);
+    saveScores(scores);
+
+    scoreEntry.active = false;
+    renderHighscores();
+
+    ui.optionsPanel.classList.add('visible');
+    ui.highscorePanel.classList.add('visible');
+    setOverlay('Highscore gespeichert', '<b>' + name + '</b> · Zeit: <b>' + fmtTime(scoreEntry.pendingTimeMs) + '</b><br>Du kannst den Seed über die Optionen kopieren.', 'Neues Spiel');
+    ui.overlay.classList.add('visible');
+    updateMinimapControls();
+  }
+
+  function renderInitialEntry() {
+    const slotHtml = scoreEntry.slots.map((idx, i) => {
+      return '<div class="initialSlot' + (i === scoreEntry.selected ? ' active' : '') + '">' + INITIAL_CHARS[idx] + '</div>';
+    }).join('');
+
+    ui.overlayTitle.textContent = 'Neuer Highscore!';
+    ui.overlayText.innerHTML =
+      'Zeit: <b>' + fmtTime(scoreEntry.pendingTimeMs) + '</b> · Seed: <b>' + scoreEntry.pendingSeed + '</b>' +
+      '<div class="initialSlots">' + slotHtml + '</div>' +
+      '<div class="smallNote"><b>A/D</b>: Zeichen wählen · <b>W/S</b>: Buchstabe/Zahl ändern · <b>Enter</b>: speichern</div>';
+    ui.bigStartBtn.textContent = 'Highscore speichern';
+    ui.overlay.classList.add('visible');
+    updateMinimapControls();
+  }
+
+  function handleInitialKeys(e) {
+    if (!scoreEntry.active) return false;
+
+    if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+      scoreEntry.selected = (scoreEntry.selected + 2) % 3;
+      renderInitialEntry();
+      e.preventDefault();
+      return true;
+    }
+    if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+      scoreEntry.selected = (scoreEntry.selected + 1) % 3;
+      renderInitialEntry();
+      e.preventDefault();
+      return true;
+    }
+    if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+      const s = scoreEntry.selected;
+      scoreEntry.slots[s] = (scoreEntry.slots[s] + 1) % INITIAL_CHARS.length;
+      renderInitialEntry();
+      e.preventDefault();
+      return true;
+    }
+    if (e.code === 'KeyS' || e.code === 'ArrowDown') {
+      const s = scoreEntry.selected;
+      scoreEntry.slots[s] = (scoreEntry.slots[s] + INITIAL_CHARS.length - 1) % INITIAL_CHARS.length;
+      renderInitialEntry();
+      e.preventDefault();
+      return true;
+    }
+    if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') {
+      submitHighscore();
+      e.preventDefault();
+      return true;
+    }
+    return false;
+  }
+
+  function copySeed() {
+    const text = String(state.seed);
+    function fallback() {
+      ui.seedInput.value = text;
+      ui.seedInput.focus();
+      ui.seedInput.select();
+      try {
+        const ok = document.execCommand('copy');
+        showToast(ok ? 'Seed kopiert' : 'Seed markiert');
+      } catch (_) {
+        showToast('Seed im Feld markiert');
+      }
+      canvas.focus();
+    }
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(() => showToast('Seed kopiert')).catch(fallback);
+    } else {
+      fallback();
+    }
+  }
+
+
+  function updateMinimapControls() {
+    if (!ui.minimapBtn || !ui.minimapSize || !ui.minimapSizeLabel) return;
+
+    ui.minimapBtn.textContent = state.minimapEnabled ? 'Minimap: An' : 'Minimap: Aus';
+    ui.minimapSize.value = String(state.minimapSize);
+    ui.minimapSizeLabel.textContent = String(state.minimapSize);
+
+    const shouldShow = state.minimapEnabled && state.running && !state.paused && !state.won && !ui.overlay.classList.contains('visible');
+    miniCanvas.classList.toggle('hidden', !shouldShow);
+
+    miniCanvas.style.width = state.minimapSize + 'px';
+    miniCanvas.style.height = state.minimapSize + 'px';
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const backing = Math.floor(state.minimapSize * dpr);
+    if (miniCanvas.width !== backing || miniCanvas.height !== backing) {
+      miniCanvas.width = backing;
+      miniCanvas.height = backing;
+    }
+  }
+
+  function toggleMinimap() {
+    state.minimapEnabled = !state.minimapEnabled;
+    localStorage.setItem(MINIMAP_ENABLED_KEY, state.minimapEnabled ? '1' : '0');
+    updateMinimapControls();
+    showToast(state.minimapEnabled ? 'Minimap an' : 'Minimap aus');
+    canvas.focus();
+  }
+
+  function updateMusicButton() {
+    ui.musicBtn.textContent = music.enabled ? 'Musik: An' : 'Musik: Aus';
+    if (ui.musicVolume) ui.musicVolume.value = String(Math.round(music.volume * 100));
+    if (ui.musicVolumeLabel) ui.musicVolumeLabel.textContent = String(Math.round(music.volume * 100)) + '%';
+    if (music.master) music.master.gain.setTargetAtTime(music.enabled ? music.volume : 0.0001, music.ctx.currentTime, 0.035);
+  }
+
+  function noteFreq(semitone) {
+    // A3 = 220 Hz, 12-TET. Dadurch sind alle Töne stabil gestimmt.
+    return 220 * Math.pow(2, semitone / 12);
+  }
+
+  function ensureAudio() {
+    if (music.ctx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) {
+      music.enabled = false;
+      updateMusicButton();
+      showToast('WebAudio nicht verfügbar');
+      return;
+    }
+    music.ctx = new AC();
+    music.master = music.ctx.createGain();
+    music.master.gain.value = music.enabled ? music.volume : 0.0001;
+    music.master.connect(music.ctx.destination);
+  }
+
+  function playTone(freq, start, dur, type, gain, panValue) {
+    if (!music.ctx || !music.master) return;
+
+    const osc = music.ctx.createOscillator();
+    const g = music.ctx.createGain();
+    const filter = music.ctx.createBiquadFilter();
+
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, start);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(type === 'triangle' ? 1450 : 2100, start);
+    filter.Q.value = 0.7;
+
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain), start + 0.018);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+
+    osc.connect(filter);
+    filter.connect(g);
+
+    if (music.ctx.createStereoPanner) {
+      const pan = music.ctx.createStereoPanner();
+      pan.pan.value = panValue || 0;
+      g.connect(pan);
+      pan.connect(music.master);
+    } else {
+      g.connect(music.master);
+    }
+
+    osc.start(start);
+    osc.stop(start + dur + 0.04);
+  }
+
+  function scheduleMusic() {
+    if (!music.ctx || !music.enabled || !music.playing) return;
+
+    const beat = 60 / music.tempo;
+    const horizon = music.ctx.currentTime + 0.55;
+
+    while (music.nextTime < horizon) {
+      const step = music.step;
+      const bar = Math.floor(step / 16) % music.progression.length;
+      const chord = music.progression[bar];
+      const pos = step % 16;
+
+      // Warme Pad-Akkorde, aber leise genug, damit nichts übersteuert.
+      if (pos % 8 === 0) {
+        for (let i = 0; i < chord.length; i++) {
+          playTone(noteFreq(chord[i]), music.nextTime, beat * 5.8, 'sine', 0.030, -0.32 + i * 0.20);
+        }
+      }
+
+      // Ruhige, pentatonische Hauptmelodie.
+      if (pos % 2 === 0) {
+        const m = music.melody[(step / 2) % music.melody.length | 0];
+        playTone(noteFreq(m + 12), music.nextTime, beat * 0.82, 'triangle', 0.052, 0.18);
+      }
+
+      // Dezente Bass-Pulse auf harmonischen Grundtönen.
+      if (pos === 0 || pos === 8) {
+        playTone(noteFreq(chord[0] - 12), music.nextTime, beat * 1.45, 'sine', 0.050, -0.08);
+      }
+
+      // Kleine Antwortfigur, ebenfalls skalenfest.
+      if (pos === 6 || pos === 14) {
+        const answer = chord[2] + 12;
+        playTone(noteFreq(answer), music.nextTime, beat * 0.70, 'triangle', 0.026, -0.22);
+      }
+
+      music.nextTime += beat / 2;
+      music.step++;
+    }
+  }
+
+  function startMusic() {
+    if (!music.enabled) return;
+    ensureAudio();
+    if (!music.ctx) return;
+    if (music.ctx.state === 'suspended') music.ctx.resume();
+
+    if (music.playing) return;
+    music.playing = true;
+    music.nextTime = music.ctx.currentTime + 0.04;
+    clearInterval(music.timer);
+    music.timer = setInterval(scheduleMusic, 90);
+    scheduleMusic();
+  }
+
+  function stopMusic() {
+    music.playing = false;
+    clearInterval(music.timer);
+    music.timer = 0;
+  }
+
+  function toggleMusic() {
+    music.enabled = !music.enabled;
+    localStorage.setItem(MUSIC_KEY, music.enabled ? '1' : '0');
+    updateMusicButton();
+
+    if (music.enabled) {
+      startMusic();
+      showToast('Musik an');
+    } else {
+      stopMusic();
+      showToast('Musik aus');
+    }
+    canvas.focus();
+  }
+
+
+  function setOverlay(title, html, buttonText) {
+    ui.overlayTitle.textContent = title;
+    ui.overlayText.innerHTML = html;
+    ui.bigStartBtn.textContent = buttonText || 'Spiel starten';
+  }
+
+
+  function updateCameraLabels() {
+    const label = state.camera.mode === 'first' ? 'First Person' : 'Orbit';
+    if (ui.cameraModeStat) ui.cameraModeStat.textContent = state.camera.mode === 'first' ? 'FP' : 'Orbit';
+    if (ui.cameraToggleBtn) ui.cameraToggleBtn.textContent = 'Kamera: ' + label;
+  }
+
+  function toggleCameraMode() {
+    state.camera.mode = state.camera.mode === 'first' ? 'orbit' : 'first';
+
+    if (state.camera.mode === 'first') {
+      // Beim Einstieg grob in aktuelle Bewegungs-/Kamerarichtung schauen.
+      state.camera.fpPitch = -0.08;
+      showToast('First-Person-Sicht');
+    } else {
+      showToast('Orbit-Sicht');
+    }
+
+    updateCameraLabels();
+    canvas.focus();
+  }
+
+  function resetCamera(silent) {
+    state.camera.mode = state.camera.mode || 'orbit';
+    state.camera.yaw = -Math.PI / 4;
+    state.camera.pitch = 0.82;
+    state.camera.fpPitch = -0.08;
+    state.camera.dist = Math.max(13, Math.min(31, state.mazeSize * 0.70));
+    updateCameraLabels();
+    if (!silent) showToast('Kamera zurückgesetzt');
+    canvas.focus();
+  }
+
+  function newGame(seedValue) {
+    const size = ensureOdd(parseInt(ui.sizeSelect.value, 10) || 21);
+    state.mazeSize = size;
+    state.seed = (seedValue === undefined || seedValue === null || seedValue === '')
+      ? randomSeed()
+      : hashSeed(seedValue);
+
+    state.grid = createMaze(size, state.seed);
+    buildWalls();
+
+    state.player.x = 1.5;
+    state.player.z = 1.5;
+    state.player.spin = 0;
+    state.player.rollYaw = 0;
+    state.goal.x = size - 1.5;
+    state.goal.z = size - 1.5;
+    state.target.x = state.player.x;
+    state.target.z = state.player.z;
+    state.won = false;
+    state.paused = false;
+    state.elapsedBeforePause = 0;
+    state.startMs = performance.now();
+
+    resetCamera(true);
+
+    ui.seed.textContent = String(state.seed);
+    ui.seedInput.placeholder = String(state.seed);
+    ui.size.textContent = size + '×' + size;
+
+    if (state.running) {
+      ui.overlay.classList.remove('visible');
+      ui.optionsPanel.classList.remove('visible');
+      ui.startBtn.textContent = 'Pause';
+    }
+    updateMinimapControls();
+  }
+
+  let lastStartInteractionMs = 0;
+
+  window.mizMazeStartDirect = function () {
+    const now = performance.now();
+    if (now - lastStartInteractionMs < 220) return false;
+    lastStartInteractionMs = now;
+
+    if (scoreEntry.active) {
+      submitHighscore();
+      return false;
+    }
+
+    if (state.won) {
+      state.running = true;
+      newGame();
+      state.running = false;
+    }
+
+    startGame();
+    return false;
+  };
+
+  window.mizMazeBigStart = function (event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    return window.mizMazeStartDirect();
+  };
+
+  function startGame() {
+    if (!state.running) {
+      state.running = true;
+      state.paused = false;
+      state.won = false;
+      state.elapsedBeforePause = 0;
+      state.startMs = performance.now();
+      ui.overlay.classList.remove('visible');
+      ui.optionsPanel.classList.remove('visible');
+      ui.startBtn.textContent = 'Pause';
+      updateMinimapControls();
+      canvas.focus();
+      startMusic();
+      showToast('Spiel gestartet');
+      return;
+    }
+    togglePause();
+  }
+
+  function togglePause() {
+    if (!state.running || state.won) return;
+    state.paused = !state.paused;
+    if (state.paused) {
+      state.elapsedBeforePause += performance.now() - state.startMs;
+      ui.overlay.classList.add('visible');
+      updateMinimapControls();
+      ui.startBtn.textContent = 'Weiter';
+      setOverlay('Pause', 'Drücke <b>Weiter</b> oder <b>P</b>, um fortzufahren.', 'Weiter');
+    } else {
+      state.startMs = performance.now();
+      ui.overlay.classList.remove('visible');
+      updateMinimapControls();
+      ui.startBtn.textContent = 'Pause';
+      setOverlay(
+        'Miz Maze',
+        'Rolle durch das Labyrinth und erreiche die grüne Zielkugel. Das Optionsfeld bleibt im Spiel ausgeblendet; über <b>Optionen</b> erreichst du Seed, Musik, Highscores und Steuerung.',
+        'Spiel starten'
+      );
+    }
+    canvas.focus();
+  }
+
+  function resetGame() {
+    state.player.x = 1.5;
+    state.player.z = 1.5;
+    state.player.spin = 0;
+    state.player.rollYaw = 0;
+    state.target.x = state.player.x;
+    state.target.z = state.player.z;
+    state.won = false;
+    state.paused = false;
+    state.elapsedBeforePause = 0;
+    state.startMs = performance.now();
+    if (state.running) {
+      ui.overlay.classList.remove('visible');
+      updateMinimapControls();
+      ui.startBtn.textContent = 'Pause';
+    }
+    canvas.focus();
+    showToast('Zurückgesetzt');
+  }
+
+  function isWall(cx, cz) {
+    if (cx < 0 || cz < 0 || cx >= state.mazeSize || cz >= state.mazeSize) return true;
+    return state.grid[cz][cx] === 1;
+  }
+
+  function collides(x, z) {
+    const r = state.player.radius * 0.88;
+    const minX = Math.floor(x - r);
+    const maxX = Math.floor(x + r);
+    const minZ = Math.floor(z - r);
+    const maxZ = Math.floor(z + r);
+
+    for (let cz = minZ; cz <= maxZ; cz++) {
+      for (let cx = minX; cx <= maxX; cx++) {
+        if (!isWall(cx, cz)) continue;
+        const closestX = Math.max(cx, Math.min(x, cx + 1));
+        const closestZ = Math.max(cz, Math.min(z, cz + 1));
+        const dx = x - closestX;
+        const dz = z - closestZ;
+        if (dx * dx + dz * dz < r * r) return true;
+      }
+    }
+    return false;
+  }
+
+  function update(dt) {
+    if (!state.running || state.paused || state.won) return;
+
+    let ix = 0, iz = 0;
+    if (state.keys.KeyW || state.keys.ArrowUp) iz -= 1;
+    if (state.keys.KeyS || state.keys.ArrowDown) iz += 1;
+    if (state.keys.KeyA || state.keys.ArrowLeft) ix -= 1;
+    if (state.keys.KeyD || state.keys.ArrowRight) ix += 1;
+
+    ix += state.stickMoveX || 0;
+    iz += state.stickMoveZ || 0;
+    ix += state.gamepadMoveX || 0;
+    iz += state.gamepadMoveZ || 0;
+
+    if (ix || iz) {
+      const len = Math.hypot(ix, iz) || 1;
+      ix /= len; iz /= len;
+
+      let dx, dz;
+      if (ui.controlSelect.value === 'camera') {
+        const forwardX = -Math.sin(state.camera.yaw);
+        const forwardZ = -Math.cos(state.camera.yaw);
+        const rightX = Math.cos(state.camera.yaw);
+        const rightZ = -Math.sin(state.camera.yaw);
+        dx = rightX * ix + forwardX * -iz;
+        dz = rightZ * ix + forwardZ * -iz;
+      } else {
+        dx = ix;
+        dz = iz;
+      }
+
+      const dlen = Math.hypot(dx, dz) || 1;
+      dx /= dlen; dz /= dlen;
+
+      const speed = 3.15;
+      const mx = dx * speed * dt;
+      const mz = dz * speed * dt;
+
+      const oldX = state.player.x;
+      const oldZ = state.player.z;
+
+      if (!collides(state.player.x + mx, state.player.z)) state.player.x += mx;
+      if (!collides(state.player.x, state.player.z + mz)) state.player.z += mz;
+
+      const moved = Math.hypot(state.player.x - oldX, state.player.z - oldZ);
+      if (moved > 0.0001) {
+        state.player.spin += moved / state.player.radius;
+        state.player.rollYaw = Math.atan2(dx, dz);
+      }
+    }
+
+    const follow = 1 - Math.pow(0.0001, dt);
+    state.target.x += (state.player.x - state.target.x) * follow;
+    state.target.z += (state.player.z - state.target.z) * follow;
+
+    if (Math.hypot(state.player.x - state.goal.x, state.player.z - state.goal.z) < 0.55) {
+      const finalTimeMs = state.elapsedBeforePause + (performance.now() - state.startMs);
+      state.won = true;
+      state.running = false;
+      ui.startBtn.textContent = 'Start';
+      updateMinimapControls();
+
+      const rank = rankForTime(finalTimeMs);
+      if (rank >= 0) {
+        scoreEntry.active = true;
+        scoreEntry.slots = [0, 0, 0];
+        scoreEntry.selected = 0;
+        scoreEntry.pendingTimeMs = finalTimeMs;
+        scoreEntry.pendingSeed = state.seed;
+        scoreEntry.pendingSize = state.mazeSize;
+        renderInitialEntry();
+      } else {
+        ui.overlay.classList.add('visible');
+        setOverlay('Geschafft!', 'Du hast das Ziel erreicht. Zeit: <b>' + fmtTime(finalTimeMs) + '</b> · Seed: <b>' + state.seed + '</b>', 'Noch einmal');
+      }
+      showToast('Ziel erreicht');
+    }
+  }
+
+  function resize() {
+    state.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.floor(window.innerWidth * state.dpr));
+    const h = Math.max(1, Math.floor(window.innerHeight * state.dpr));
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+      gl.viewport(0, 0, w, h);
+    }
+  }
+
+  function clear() {
+    gl.clearColor(0.018, 0.027, 0.065, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  }
+
+  function setupCamera() {
+    const aspect = canvas.width / Math.max(1, canvas.height);
+    const isFirst = state.camera.mode === 'first';
+
+    Mat4.perspective(proj, isFirst ? Math.PI / 3.25 : Math.PI / 4.8, aspect, 0.035, 160);
+
+    let target;
+    let eye;
+
+    if (isFirst) {
+      const yaw = state.camera.yaw;
+      const pitch = state.camera.fpPitch;
+
+      const forwardX = -Math.sin(yaw) * Math.cos(pitch);
+      const forwardY = Math.sin(pitch);
+      const forwardZ = -Math.cos(yaw) * Math.cos(pitch);
+
+      // Sicht aus der Kugel heraus, leicht oberhalb und minimal vor der Kugelmitte,
+      // damit man nicht in der eigenen Kugel-Geometrie steckt.
+      eye = [
+        state.player.x + forwardX * 0.22,
+        state.player.radius + 0.20,
+        state.player.z + forwardZ * 0.22
+      ];
+
+      target = [
+        eye[0] + forwardX * 4.0,
+        eye[1] + forwardY * 4.0,
+        eye[2] + forwardZ * 4.0
+      ];
+    } else {
+      const cy = Math.cos(state.camera.pitch);
+      const sy = Math.sin(state.camera.pitch);
+      const yaw = state.camera.yaw;
+      const dist = state.camera.dist;
+
+      target = [state.target.x, 0.25, state.target.z];
+      eye = [
+        target[0] + Math.sin(yaw) * cy * dist,
+        target[1] + sy * dist,
+        target[2] + Math.cos(yaw) * cy * dist
+      ];
+    }
+
+    Mat4.lookAt(view, eye, target, [0, 1, 0]);
+
+    // projection * view
+    Mat4.multiply(viewProj, proj, view);
+
+    gl.uniformMatrix4fv(loc.uViewProj, false, viewProj);
+    gl.uniform3fv(loc.uCamera, new Float32Array(eye));
+  }
+
+  function render() {
+    resize();
+    clear();
+
+    gl.useProgram(program);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.disable(gl.BLEND);
+    gl.disable(gl.CULL_FACE);
+    gl.uniform3fv(loc.uLightDir, new Float32Array([-0.45, 0.95, 0.35]));
+    setupCamera();
+
+    // Boden.
+    Mat4.fromTRS(tmpModel, [state.mazeSize / 2, -0.012, state.mazeSize / 2], 0, [state.mazeSize, 1, state.mazeSize]);
+    drawMesh(planeMesh, tmpModel, colors.floor, 0.0, 0.0);
+
+    // Wände.
+    for (let i = 0; i < state.walls.length; i++) {
+      const w = state.walls[i];
+      Mat4.fromTRS(tmpModel, [w.x + 0.5, 0.52, w.z + 0.5], 0, [1.0, 1.04, 1.0]);
+      drawMesh(cubeMesh, tmpModel, (i & 1) ? colors.wall : colors.wallAlt, 0.18, 0.0);
+    }
+
+    // Ziel.
+    Mat4.fromTRS(tmpModel, [state.goal.x, 0.045, state.goal.z], 0, [0.72, 0.03, 0.72]);
+    drawMesh(cubeMesh, tmpModel, colors.goal, 0.15, 0.18);
+
+    const bob = Math.sin(performance.now() * 0.004) * 0.055;
+    Mat4.fromTRS(tmpModel, [state.goal.x, 0.44 + bob, state.goal.z], 0, [0.26, 0.26, 0.26]);
+    drawMesh(sphereMesh, tmpModel, colors.goal, 0.25, 0.25);
+
+    // Kugel. In First Person ausgeblendet, weil die Kamera direkt aus/über der Kugel schaut.
+    if (state.camera.mode !== 'first') {
+      Mat4.fromTRS(tmpModel, [state.player.x, state.player.radius, state.player.z], state.player.rollYaw, [state.player.radius, state.player.radius, state.player.radius]);
+      drawMesh(sphereMesh, tmpModel, colors.ball, 0.82, 0.02);
+    }
+  }
+
+  function drawMinimap() {
+    const w = miniCanvas.width, h = miniCanvas.height;
+    const pad = 10;
+    const size = state.mazeSize;
+    const cell = (Math.min(w, h) - pad * 2) / size;
+
+    mini.clearRect(0, 0, w, h);
+    mini.fillStyle = 'rgba(2, 6, 23, .94)';
+    mini.fillRect(0, 0, w, h);
+
+    for (let z = 0; z < size; z++) {
+      for (let x = 0; x < size; x++) {
+        mini.fillStyle = state.grid[z][x] ? 'rgba(96, 165, 250, .82)' : 'rgba(15, 23, 42, .94)';
+        mini.fillRect(pad + x * cell, pad + z * cell, Math.ceil(cell), Math.ceil(cell));
+      }
+    }
+
+    mini.fillStyle = '#86efac';
+    mini.beginPath();
+    mini.arc(pad + state.goal.x * cell, pad + state.goal.z * cell, Math.max(3, cell * .46), 0, Math.PI * 2);
+    mini.fill();
+
+    mini.fillStyle = '#fb923c';
+    mini.beginPath();
+    mini.arc(pad + state.player.x * cell, pad + state.player.z * cell, Math.max(3, cell * .43), 0, Math.PI * 2);
+    mini.fill();
+
+    mini.strokeStyle = 'rgba(251, 146, 60, .9)';
+    mini.lineWidth = 2;
+    const px = pad + state.player.x * cell;
+    const pz = pad + state.player.z * cell;
+    mini.beginPath();
+    mini.moveTo(px, pz);
+    mini.lineTo(px - Math.sin(state.camera.yaw) * cell * 1.2, pz - Math.cos(state.camera.yaw) * cell * 1.2);
+    mini.stroke();
+
+    mini.strokeStyle = 'rgba(226, 232, 240, .36)';
+    mini.lineWidth = 2;
+    mini.strokeRect(pad, pad, size * cell, size * cell);
+  }
+
+  function updateTimeStats() {
+    const elapsed = state.running && !state.paused
+      ? state.elapsedBeforePause + (performance.now() - state.startMs)
+      : state.elapsedBeforePause;
+    const t = fmtTime(elapsed);
+    ui.time.textContent = t;
+    ui.timeCompact.textContent = t;
+  }
+
+  function loop(now) {
+    const dt = Math.min(0.04, (now - state.lastFrame) / 1000);
+    state.lastFrame = now;
+
+    pollGamepads();
+    update(dt);
+    render();
+    drawMinimap();
+    updateTimeStats();
+
+    state.fpsAccum += 1 / Math.max(dt, 0.0001);
+    state.fpsFrames++;
+    if (now - state.fpsLast > 450) {
+      const fps = String(Math.round(state.fpsAccum / state.fpsFrames));
+      ui.fps.textContent = fps;
+      state.fpsAccum = 0;
+      state.fpsFrames = 0;
+      state.fpsLast = now;
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+
+
+  function deadzone(v, dz) {
+    return Math.abs(v) < dz ? 0 : (v - Math.sign(v) * dz) / (1 - dz);
+  }
+
+  function setKnob(knob, x, y) {
+    if (!knob) return;
+    knob.style.transform = 'translate(' + Math.round(x) + 'px, ' + Math.round(y) + 'px)';
+  }
+
+  function setupTouchStick(stickEl, knobEl, onMove, onEnd) {
+    if (!stickEl || !knobEl) return;
+
+    let active = false;
+    let pointerId = null;
+    let rect = null;
+    const max = 46;
+
+    function update(event) {
+      if (!active || (pointerId !== null && event.pointerId !== pointerId)) return;
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      let x = event.clientX - cx;
+      let y = event.clientY - cy;
+      const len = Math.hypot(x, y);
+      if (len > max) {
+        x = x / len * max;
+        y = y / len * max;
+      }
+      setKnob(knobEl, x, y);
+      onMove(x / max, y / max);
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    stickEl.addEventListener('pointerdown', (event) => {
+      active = true;
+      pointerId = event.pointerId;
+      rect = stickEl.getBoundingClientRect();
+      try { stickEl.setPointerCapture(pointerId); } catch (_) {}
+      update(event);
+    }, { passive: false });
+
+    stickEl.addEventListener('pointermove', update, { passive: false });
+
+    function end(event) {
+      if (!active || (pointerId !== null && event.pointerId !== pointerId)) return;
+      active = false;
+      pointerId = null;
+      setKnob(knobEl, 0, 0);
+      onEnd();
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    stickEl.addEventListener('pointerup', end, { passive: false });
+    stickEl.addEventListener('pointercancel', end, { passive: false });
+  }
+
+  function updateMobileUiMode() {
+    const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const small = Math.min(window.innerWidth, window.innerHeight) < 760;
+    document.body.classList.toggle('mobile-ui', coarse || small);
+  }
+
+  function pollGamepads() {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    let pad = null;
+
+    for (let i = 0; i < pads.length; i++) {
+      if (pads[i] && pads[i].connected) {
+        pad = pads[i];
+        break;
+      }
+    }
+
+    if (!pad) {
+      state.gamepadName = '';
+      state.stickMoveX = state.stickMoveX || 0;
+      state.stickMoveZ = state.stickMoveZ || 0;
+      return;
+    }
+
+    state.gamepadName = pad.id || 'Gamepad';
+
+    const ax = pad.axes || [];
+    const buttons = pad.buttons || [];
+
+    const lx = deadzone(ax[0] || 0, 0.18);
+    const ly = deadzone(ax[1] || 0, 0.18);
+    const rx = deadzone(ax[2] || 0, 0.18);
+    const ry = deadzone(ax[3] || 0, 0.18);
+
+    // Gamepad-Input addiert sich mit Touch-Sticks, überschreibt aber nicht dauerhaft.
+    state.gamepadMoveX = lx;
+    state.gamepadMoveZ = ly;
+    state.gamepadLookX = rx;
+    state.gamepadLookY = ry;
+
+    if (Math.abs(rx) > 0 || Math.abs(ry) > 0) {
+      state.camera.yaw -= rx * 0.055;
+      if (state.camera.mode === 'first') {
+        state.camera.fpPitch = Math.max(-0.72, Math.min(0.48, state.camera.fpPitch - ry * 0.030));
+      } else {
+        state.camera.pitch = Math.max(0.35, Math.min(1.24, state.camera.pitch + ry * 0.030));
+      }
+    }
+
+    // Trigger/Schultertasten als Orbit-Zoom.
+    if (state.camera.mode !== 'first') {
+      const lt = buttons[6] ? buttons[6].value : 0;
+      const rt = buttons[7] ? buttons[7].value : 0;
+      if (lt > 0.08 || rt > 0.08) {
+        state.camera.dist = Math.max(6.5, Math.min(44, state.camera.dist + (lt - rt) * 0.45));
+      }
+    }
+
+    function pressed(index) {
+      return !!(buttons[index] && buttons[index].pressed);
+    }
+
+    function once(name, index, fn) {
+      const now = pressed(index);
+      if (now && !state.gamepadButtons[name]) fn();
+      state.gamepadButtons[name] = now;
+    }
+
+    // Standard-Mapping:
+    // A=0 Start/Weiter, B=1 Reset, X=2 Optionen, Y=3 Kamera, Start=9 Pause.
+    once('a', 0, () => {
+      if (!state.running || state.paused || state.won || ui.overlay.classList.contains('visible')) {
+        window.mizMazeStartDirect && window.mizMazeStartDirect();
+      }
+    });
+    once('b', 1, resetGame);
+    once('x', 2, () => ui.optionsPanel.classList.toggle('visible'));
+    once('y', 3, toggleCameraMode);
+    once('start', 9, () => {
+      if (state.running) togglePause();
+      else window.mizMazeStartDirect && window.mizMazeStartDirect();
+    });
+  }
+
+  function showGamepadInfo() {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const connected = Array.from(pads).filter(Boolean);
+    if (!connected.length) {
+      showToast('Kein Gamepad erkannt · Taste am Controller drücken');
+    } else {
+      showToast('Joystick: ' + (connected[0].id || 'erkannt'));
+    }
+    canvas.focus();
+  }
+
+
+  function beginCameraDrag(event) {
+    // Rechte Maustaste: event.button === 2, bei Pointer-Fallback auch buttons & 2.
+    if (event.button !== 2 && !(event.buttons & 2)) return;
+
+    state.rightDrag = true;
+    state.lastMouseX = event.clientX;
+    state.lastMouseY = event.clientY;
+    canvas.style.cursor = 'grabbing';
+    canvas.focus();
+
+    if (event.pointerId !== undefined && canvas.setPointerCapture) {
+      try { canvas.setPointerCapture(event.pointerId); } catch (_) {}
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function updateCameraDrag(event) {
+    // In Firefox kann mousemove im Orbit-Modus nach UI-Änderungen manchmal ohne klassischen
+    // mousedown-State ankommen. Solange rechte Taste gehalten wird, aktivieren wir den Drag wieder.
+    if (!state.rightDrag && !(event.buttons & 2)) return;
+    if (!state.rightDrag && (event.buttons & 2)) {
+      state.rightDrag = true;
+      state.lastMouseX = event.clientX;
+      state.lastMouseY = event.clientY;
+      canvas.style.cursor = 'grabbing';
+      return;
+    }
+
+    const dx = event.clientX - state.lastMouseX;
+    const dy = event.clientY - state.lastMouseY;
+    state.lastMouseX = event.clientX;
+    state.lastMouseY = event.clientY;
+
+    state.camera.yaw -= dx * 0.0085;
+
+    if (state.camera.mode === 'first') {
+      state.camera.fpPitch = Math.max(-0.72, Math.min(0.48, state.camera.fpPitch - dy * 0.0045));
+    } else {
+      // Orbit: vertikale Mausbewegung ändert die Orbit-Höhe.
+      state.camera.pitch = Math.max(0.35, Math.min(1.24, state.camera.pitch + dy * 0.0045));
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function endCameraDrag(event) {
+    state.rightDrag = false;
+    canvas.style.cursor = 'default';
+
+    if (event && event.pointerId !== undefined && canvas.releasePointerCapture) {
+      try { canvas.releasePointerCapture(event.pointerId); } catch (_) {}
+    }
+  }
+
+  function zoomOrbit(event) {
+    if (state.camera.mode !== 'first') {
+      const f = event.deltaY > 0 ? 1.10 : 0.90;
+      state.camera.dist = Math.max(6.5, Math.min(44, state.camera.dist * f));
+      event.preventDefault();
+      event.stopPropagation();
+      return false;
+    }
+    return true;
+  }
+
+
+  function bindEvents() {
+    window.addEventListener('resize', () => {
+      resize();
+      updateMobileUiMode();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (handleInitialKeys(e)) return;
+      state.keys[e.code] = true;
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+
+      if (e.code === 'KeyP') togglePause();
+      if (e.code === 'KeyR') resetGame();
+      if (e.code === 'KeyC') toggleCameraMode();
+      if (e.code === 'KeyO') ui.optionsPanel.classList.toggle('visible');
+      if (e.code === 'Escape') ui.optionsPanel.classList.remove('visible');
+      if (e.code === 'KeyN') {
+        const was = state.running;
+        state.running = true;
+        newGame();
+        if (!was) state.running = false;
+        if (state.running) ui.overlay.classList.remove('visible');
+        showToast('Neues Maze');
+      }
+    }, { passive: false });
+
+    window.addEventListener('keyup', (e) => {
+      state.keys[e.code] = false;
+    });
+
+    window.addEventListener('blur', () => {
+      state.keys = Object.create(null);
+      state.gamepadMoveX = 0;
+      state.gamepadMoveZ = 0;
+      state.gamepadLookX = 0;
+      state.gamepadLookY = 0;
+    });
+
+    window.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    }, { passive: false });
+
+    // Pointer Events: primärer Pfad für Firefox/Chrome/Edge.
+    canvas.addEventListener('pointerdown', beginCameraDrag, { passive: false });
+    window.addEventListener('pointermove', updateCameraDrag, { passive: false });
+    window.addEventListener('pointerup', endCameraDrag, { passive: false });
+    window.addEventListener('pointercancel', endCameraDrag, { passive: false });
+
+    // Klassische Maus-Events als Fallback.
+    canvas.addEventListener('mousedown', beginCameraDrag, { passive: false });
+    window.addEventListener('mousemove', updateCameraDrag, { passive: false });
+    window.addEventListener('mouseup', endCameraDrag, { passive: false });
+
+    // Wheel auf Canvas plus Window-Fallback. Der Window-Fallback greift nur,
+    // wenn das Optionsmenü/Overlay nicht sichtbar ist, damit UI-Slider nicht gestört werden.
+    canvas.addEventListener('wheel', zoomOrbit, { passive: false });
+    window.addEventListener('wheel', (e) => {
+      if (ui.overlay.classList.contains('visible') || ui.optionsPanel.classList.contains('visible')) return;
+      zoomOrbit(e);
+    }, { passive: false });
+
+    ui.startBtn.addEventListener('click', startGame);
+    ui.bigStartBtn.addEventListener('click', (event) => {
+      window.mizMazeBigStart(event);
+    });
+
+    ui.bigStartBtn.addEventListener('pointerdown', (event) => {
+      window.mizMazeBigStart(event);
+    });
+
+    ui.bigStartBtn.addEventListener('mousedown', (event) => {
+      window.mizMazeBigStart(event);
+    });
+
+    document.addEventListener('pointerdown', (event) => {
+      if (event.target && event.target.id === 'bigStartBtn') {
+        window.mizMazeBigStart(event);
+      }
+    }, true);
+
+    ui.optionsBtn.addEventListener('click', () => {
+      ui.optionsPanel.classList.toggle('visible');
+      renderHighscores();
+      canvas.focus();
+    });
+
+    ui.copySeedBtn.addEventListener('click', copySeed);
+    ui.musicBtn.addEventListener('click', toggleMusic);
+
+    ui.musicVolume.addEventListener('input', () => {
+      music.volume = Math.max(0, Math.min(1, parseInt(ui.musicVolume.value, 10) / 100));
+      localStorage.setItem(MUSIC_VOLUME_KEY, String(music.volume));
+      updateMusicButton();
+      if (music.enabled && state.running) startMusic();
+    });
+
+    ui.minimapBtn.addEventListener('click', toggleMinimap);
+
+    ui.minimapSize.addEventListener('input', () => {
+      state.minimapSize = Math.max(90, Math.min(260, parseInt(ui.minimapSize.value, 10) || 190));
+      localStorage.setItem(MINIMAP_SIZE_KEY, String(state.minimapSize));
+      updateMinimapControls();
+    });
+
+    ui.highscoreBtn.addEventListener('click', () => {
+      renderHighscores();
+      ui.highscorePanel.classList.toggle('visible');
+      ui.optionsPanel.classList.add('visible');
+      canvas.focus();
+    });
+
+    ui.gamepadInfoBtn.addEventListener('click', showGamepadInfo);
+
+    setupTouchStick(
+      ui.moveStick,
+      ui.moveKnob,
+      (x, y) => {
+        state.stickMoveX = x;
+        state.stickMoveZ = y;
+      },
+      () => {
+        state.stickMoveX = 0;
+        state.stickMoveZ = 0;
+      }
+    );
+
+    setupTouchStick(
+      ui.lookStick,
+      ui.lookKnob,
+      (x, y) => {
+        state.stickLookX = x;
+        state.stickLookY = y;
+        state.camera.yaw -= x * 0.050;
+        if (state.camera.mode === 'first') {
+          state.camera.fpPitch = Math.max(-0.72, Math.min(0.48, state.camera.fpPitch - y * 0.028));
+        } else {
+          state.camera.pitch = Math.max(0.35, Math.min(1.24, state.camera.pitch + y * 0.028));
+        }
+      },
+      () => {
+        state.stickLookX = 0;
+        state.stickLookY = 0;
+      }
+    );
+
+    ui.mobileCamBtn.addEventListener('click', toggleCameraMode);
+    ui.mobileResetBtn.addEventListener('click', resetGame);
+    ui.mobileOptBtn.addEventListener('click', () => {
+      ui.optionsPanel.classList.toggle('visible');
+      renderHighscores();
+      canvas.focus();
+    });
+
+    window.addEventListener('gamepadconnected', (event) => {
+      state.gamepadName = event.gamepad && event.gamepad.id ? event.gamepad.id : 'Gamepad';
+      showToast('Joystick erkannt');
+    });
+
+    window.addEventListener('gamepaddisconnected', () => {
+      state.gamepadName = '';
+      state.gamepadMoveX = 0;
+      state.gamepadMoveZ = 0;
+      state.gamepadLookX = 0;
+      state.gamepadLookY = 0;
+      showToast('Joystick getrennt');
+    });
+
+    ui.newBtn.addEventListener('click', () => {
+      const wasRunning = state.running;
+      state.running = true;
+      newGame();
+      if (!wasRunning) {
+        state.running = false;
+        ui.startBtn.textContent = 'Start';
+        ui.overlay.classList.add('visible');
+      }
+      showToast('Neues Maze erzeugt');
+      canvas.focus();
+    });
+
+    ui.resetBtn.addEventListener('click', resetGame);
+    ui.camResetBtn.addEventListener('click', () => resetCamera(false));
+    ui.cameraToggleBtn.addEventListener('click', toggleCameraMode);
+
+    ui.sizeSelect.addEventListener('change', () => {
+      const wasRunning = state.running;
+      state.running = true;
+      newGame();
+      if (!wasRunning) {
+        state.running = false;
+        ui.startBtn.textContent = 'Start';
+        ui.overlay.classList.add('visible');
+      }
+      showToast('Maze-Größe geändert');
+      canvas.focus();
+    });
+
+    ui.seedBtn.addEventListener('click', () => {
+      const seedText = ui.seedInput.value.trim();
+      if (!seedText) {
+        showToast('Seed eintragen oder Neues Maze nutzen');
+        return;
+      }
+      const wasRunning = state.running;
+      state.running = true;
+      newGame(seedText);
+      if (!wasRunning) {
+        state.running = false;
+        ui.startBtn.textContent = 'Start';
+        ui.overlay.classList.add('visible');
+      }
+      showToast('Seed geladen');
+      canvas.focus();
+    });
+  }
+
+  function init() {
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+
+    bindEvents();
+    resize();
+    updateMobileUiMode();
+    updateMusicButton();
+    updateMinimapControls();
+    renderHighscores();
+    newGame();
+    requestAnimationFrame(loop);
+    window.mizMazeLoaded = true;
+    showToast('Bereit · Miz Maze v13');
+  }
+
+  try {
+    init();
+  } catch (err) {
+    fail('Fehler beim Start:\n\n' + (err && err.stack ? err.stack : String(err)));
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Miz Maze Diagnose</title>
+<style>
+  html,body{margin:0;background:#0f172a;color:#e5e7eb;font:16px system-ui,-apple-system,Segoe UI,sans-serif}
+  main{max-width:760px;margin:0 auto;padding:24px}
+  .box{background:#111827;border:1px solid #334155;border-radius:16px;padding:16px;margin:12px 0}
+  .ok{color:#86efac}.bad{color:#fca5a5}.warn{color:#fde68a}
+  code{background:#020617;padding:2px 5px;border-radius:6px}
+  button{padding:12px 16px;border-radius:12px;border:1px solid #5eead4;background:#134e4a;color:white;font-weight:700}
+</style>
+</head>
+<body>
+<noscript>
+  <main>
+    <h1 class="bad">JavaScript wird hier nicht ausgeführt</h1>
+    <p>Diese Umgebung zeigt HTML an, führt aber kein JavaScript aus. Miz Maze kann hier nicht laufen.</p>
+  </main>
+</noscript>
+<main id="app" style="display:none">
+  <h1>Miz Maze Diagnose</h1>
+  <div class="box" id="status">JavaScript-Test läuft…</div>
+  <div class="box" id="webgl">WebGL-Test läuft…</div>
+  <div class="box" id="storage">Storage-Test läuft…</div>
+  <div class="box" id="touch">Touch/Klick-Test: <button id="tapBtn">Tippen/Klicken</button> <span id="tapResult">noch nicht getestet</span></div>
+  <div class="box">
+    <b>Interpretation:</b>
+    <p>Wenn diese Seite nur die rote JavaScript-Meldung zeigt, öffnest du sie in einer Vorschau/QuickLook-Umgebung oder JavaScript ist blockiert.</p>
+    <p>Wenn JavaScript und WebGL grün sind, sollte Miz Maze grundsätzlich laufen.</p>
+  </div>
+</main>
+<script>
+(function(){
+  const app = document.getElementById('app');
+  app.style.display = 'block';
+
+  function cls(ok){ return ok ? 'ok' : 'bad'; }
+  function set(id, html, ok){
+    const el = document.getElementById(id);
+    el.className = 'box ' + (ok === null ? 'warn' : cls(ok));
+    el.innerHTML = html;
+  }
+
+  set('status', '<b>JavaScript:</b> aktiv ✅<br><small>User Agent: '+navigator.userAgent.replace(/[<>&]/g,'')+'</small>', true);
+
+  let glOk = false, glName = 'nicht verfügbar';
+  try {
+    const c = document.createElement('canvas');
+    const gl = c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl');
+    glOk = !!gl;
+    glName = gl ? (gl instanceof WebGL2RenderingContext ? 'WebGL2' : 'WebGL1') : 'nicht verfügbar';
+  } catch(e) {
+    glName = 'Fehler: ' + e.message;
+  }
+  set('webgl', '<b>WebGL:</b> '+glName+(glOk?' ✅':' ❌'), glOk);
+
+  let storageOk = false, storageMsg = '';
+  try {
+    localStorage.setItem('mizMazeDiag','ok');
+    storageMsg = localStorage.getItem('mizMazeDiag');
+    storageOk = storageMsg === 'ok';
+  } catch(e) {
+    storageMsg = 'blockiert: ' + e.name + ' / ' + e.message;
+  }
+  set('storage', '<b>localStorage:</b> '+(storageOk?'aktiv ✅':'nicht nutzbar ⚠️')+'<br><small>'+String(storageMsg).replace(/[<>&]/g,'')+'</small>', storageOk ? true : null);
+
+  document.getElementById('tapBtn').addEventListener('click', function(){
+    document.getElementById('tapResult').innerHTML = '<span class="ok">Click/Tap kam in JavaScript an ✅</span>';
+  });
+})();
+</script>
+</body>
+</html>
