@@ -1,5 +1,5 @@
 # miz_maze
-3D Maze Game for the Browser mit Orbit View and FPV View
+3D Maze Game for the Browser with Orbit View and FPV View
 
 <img width="1515" height="751" alt="grafik" src="https://github.com/user-attachments/assets/dcdfb409-31c4-4809-bef4-39d7981765fa" />
 
