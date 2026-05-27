@@ -3,6 +3,8 @@
 
 <img width="1515" height="751" alt="grafik" src="https://github.com/user-attachments/assets/dcdfb409-31c4-4809-bef4-39d7981765fa" />
 
+Language: German
+
 ## How to use:
 
 Just start miz_maze_webgl_v13.html in the Browser on a PC. Controls are well known WSAD and rightclick the mouse to rotate the view / zoom with mousewheel.
