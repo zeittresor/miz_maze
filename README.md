@@ -15,4 +15,5 @@ The Mobile Version (miz_maze_webgl_v20_mobile.html) is currently not local runni
 
 <img width="1509" height="749" alt="grafik" src="https://github.com/user-attachments/assets/3309a950-bf8b-46fe-a2be-add1b7b343a0" />
 
+
 Source: https://github.com/zeittresor/miz_maze
